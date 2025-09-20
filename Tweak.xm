@@ -1,29 +1,5 @@
 #import <UIKit/UIKit.h>
 
-// 插件注册入口
-%hook MinimizeViewController
-
-- (void)viewDidLoad {
-    %orig;
-    
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        @try {
-            Class wcPluginsMgr = objc_getClass("WCPluginsMgr");
-            id instance = [wcPluginsMgr performSelector:@selector(sharedInstance)];
-            if (instance && [instance respondsToSelector:@selector(registerControllerWithTitle:version:controller:)]) {
-                [instance registerControllerWithTitle:@"全局返回手势" 
-                                           version:@"1.0" 
-                                        controller:@"CS1InputTextSettingsViewController"];
-            }
-        } @catch (NSException *exception) {
-            NSLog(@"插件注册失败: %@", exception);
-        }
-    });
-}
-%end
-
-
 // WCIsOverSeaUser微信通行密钥
 
 %hook SettingUtil
@@ -201,51 +177,38 @@ unsigned long long hook_isOpenNewBackup(id self, SEL _cmd) {
 
 // WCFullSwipe微信添加全局屏幕中间返回功能
 
-NSString * const kEnableFullscreenBackGestureKey = @"com.wechat.enhance.enableFullscreenBackGesture";
-NSString * const kFullscreenBackGestureStateChangedNotification = @"FullscreenBackGestureStateChangedNotification";
 %hook MMUIViewController
 
-// 1. 封装手势添加逻辑（新增方法）
-- (void)cs_addFullscreenBackGestureIfNeeded {
-    BOOL enabled = [[NSUserDefaults standardUserDefaults] boolForKey:kEnableFullscreenBackGestureKey];
-    if (!enabled) return;
+- (void)viewDidLoad {
+    %orig;
+
+    // 检查是否启用全屏返回手势
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    BOOL isFullScreenBackGestureEnabled = [defaults boolForKey:@"com.wechat.enhance.fullScreenBackGesture.enabled"];
     
-    // 保留您原有的手势实现
+    if (!isFullScreenBackGestureEnabled) {
+        return;
+    }
+
     UIGestureRecognizer *edgeGesture = self.navigationController.interactivePopGestureRecognizer;
     edgeGesture.enabled = YES;
-    
+
     NSArray *targets = [edgeGesture valueForKey:@"_targets"];
     id targetObj = [targets.firstObject valueForKey:@"target"];
     SEL action = NSSelectorFromString(@"handleNavigationTransition:");
+
+    UIPanGestureRecognizer *fullScreenPan = [[UIPanGestureRecognizer alloc] initWithTarget:targetObj action:action];
+    fullScreenPan.delegate = (id<UIGestureRecognizerDelegate>)self;
     
-    // 避免重复添加手势
-    __block BOOL gestureExists = NO;
-    [self.view.gestureRecognizers enumerateObjectsUsingBlock:^(__kindof UIGestureRecognizer *obj, NSUInteger idx, BOOL *stop) {
-        if ([NSStringFromSelector(obj.action) containsString:@"handleNavigationTransition"]) {
-            gestureExists = YES;
-            *stop = YES;
-        }
-    }];
+    fullScreenPan.maximumNumberOfTouches = 1;
     
-    if (!gestureExists) {
-        UIPanGestureRecognizer *fullScreenPan = [[UIPanGestureRecognizer alloc] 
-            initWithTarget:targetObj 
-                   action:action];
-        fullScreenPan.delegate = (id<UIGestureRecognizerDelegate>)self;
-        fullScreenPan.maximumNumberOfTouches = 1;
-        fullScreenPan.cancelsTouchesInView = NO;
-        [self.view addGestureRecognizer:fullScreenPan];
-    }
+    fullScreenPan.cancelsTouchesInView = NO;
+    
+    [self.view addGestureRecognizer:fullScreenPan];
 }
 
-// 2. 修改viewDidLoad（调用新增方法）
-- (void)viewDidLoad {
-    %orig;
-    [self cs_addFullscreenBackGestureIfNeeded];
-}
-
-// 3. 保留您原有的手势代理方法（完全不变）
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
+
     if ([gestureRecognizer isKindOfClass:[UIPanGestureRecognizer class]] && 
         gestureRecognizer != self.navigationController.interactivePopGestureRecognizer) {
         UIPanGestureRecognizer *panGesture = (UIPanGestureRecognizer *)gestureRecognizer;
@@ -265,59 +228,22 @@ NSString * const kFullscreenBackGestureStateChangedNotification = @"FullscreenBa
     return %orig;
 }
 
-// 4. 添加通知监听方法
-- (void)cs_handleGestureSettingChange:(NSNotification *)notification {
-    // 移除现有的全屏返回手势
-    [self.view.gestureRecognizers enumerateObjectsUsingBlock:^(__kindof UIGestureRecognizer *obj, NSUInteger idx, BOOL *stop) {
-        if ([NSStringFromSelector(obj.action) containsString:@"handleNavigationTransition"] && 
-            obj != self.navigationController.interactivePopGestureRecognizer) {
-            [self.view removeGestureRecognizer:obj];
-            *stop = YES;
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+
+    if (gestureRecognizer != self.navigationController.interactivePopGestureRecognizer && 
+        [gestureRecognizer isKindOfClass:[UIPanGestureRecognizer class]]) {
+        
+        if (otherGestureRecognizer == self.navigationController.interactivePopGestureRecognizer) {
+            return NO;
         }
-    }];
+        
+        return NO;
+    }
     
-    // 根据需要重新添加手势
-    [self cs_addFullscreenBackGestureIfNeeded];
+    return NO;
 }
 
 %end
-%ctor {
-    %init;
-    
-    // 注册通知监听
-    [[NSNotificationCenter defaultCenter] 
-        addObserverForName:kFullscreenBackGestureStateChangedNotification
-                    object:nil 
-                     queue:[NSOperationQueue mainQueue]
-                usingBlock:^(NSNotification *note) {
-        // 更新所有已存在的视图控制器
-        for (UIWindow *window in [UIApplication sharedApplication].windows) {
-            UIViewController *rootVC = window.rootViewController;
-            [self recursivelyUpdateGestureInViewController:rootVC];
-        }
-    }];
-    
-    // 设置默认值（首次安装时默认开启）
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:kEnableFullscreenBackGestureKey] == nil) {
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kEnableFullscreenBackGestureKey];
-    }
-}
-
-// 辅助方法：递归更新所有视图控制器的手势状态
-static void recursivelyUpdateGestureInViewController(UIViewController *vc) {
-    if ([vc isKindOfClass:NSClassFromString(@"MMUIViewController")]) {
-        [vc performSelector:@selector(cs_handleGestureSettingChange:) withObject:nil];
-    }
-    
-    for (UIViewController *childVC in vc.childViewControllers) {
-        recursivelyUpdateGestureInViewController(childVC);
-    }
-    
-    if (vc.presentedViewController) {
-        recursivelyUpdateGestureInViewController(vc.presentedViewController);
-    }
-}
-
 
 
 
@@ -429,4 +355,26 @@ static void recursivelyUpdateGestureInViewController(UIViewController *vc) {
 + (_Bool)isExptCleanOriginMsgOpened{
     return YES;
 }
+%end
+
+// 插件注册入口
+%hook MinimizeViewController
+
+- (void)viewDidLoad {
+    %orig;
+    
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+            @try {
+                Class wcPluginsMgr = objc_getClass("WCPluginsMgr");
+                id instance = [wcPluginsMgr performSelector:@selector(sharedInstance)];
+                if (instance && [instance respondsToSelector:@selector(registerControllerWithTitle:version:controller:)]) {
+                    [instance registerControllerWithTitle:wbzybt
+                                               version:wbzybb
+                                            controller:@"CS1InputTextSettingsViewController"];
+                }
+            } @catch (NSException *exception) {}
+    });
+}
+
 %end
