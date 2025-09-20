@@ -1,4 +1,5 @@
 #import <UIKit/UIKit.h>
+#import <objc/runtime.h>
 
 // WCIsOverSeaUser微信通行密钥
 
@@ -193,6 +194,14 @@ unsigned long long hook_isOpenNewBackup(id self, SEL _cmd) {
 - (void)viewDidLoad {
     %orig;
 
+    // 添加开关判断 - 检查是否启用全屏返回手势
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    BOOL isFullScreenBackGestureEnabled = [defaults boolForKey:@"com.wechat.enhance.fullScreenBackGesture.enabled"];
+    
+    if (!isFullScreenBackGestureEnabled) {
+        return; // 如果开关关闭，不添加手势
+    }
+
     UIGestureRecognizer *edgeGesture = self.navigationController.interactivePopGestureRecognizer;
     edgeGesture.enabled = YES;
 
@@ -257,11 +266,22 @@ unsigned long long hook_isOpenNewBackup(id self, SEL _cmd) {
     dispatch_once(&onceToken, ^{
             @try {
                 Class wcPluginsMgr = objc_getClass("WCPluginsMgr");
-                id instance = [wcPluginsMgr performSelector:@selector(sharedInstance)];
-                if (instance && [instance respondsToSelector:@selector(registerControllerWithTitle:version:controller:)]) {
-                    [instance registerControllerWithTitle:@"全局返回手势"
-                                               version:@"1.0.0"
-                                            controller:@"CS1InputTextSettingsViewController"];
+                
+                // 更安全的方法调用
+                SEL sharedInstanceSel = @selector(sharedInstance);
+                if ([wcPluginsMgr respondsToSelector:sharedInstanceSel]) {
+                    id instance = ((id (*)(id, SEL))objc_msgSend)(wcPluginsMgr, sharedInstanceSel);
+                    
+                    SEL registerSel = @selector(registerControllerWithTitle:version:controller:);
+                    if (instance && [instance respondsToSelector:registerSel]) {
+                        ((void (*)(id, SEL, NSString *, NSString *, NSString *))objc_msgSend)(
+                            instance, 
+                            registerSel, 
+                            @"全局返回手势",
+                            @"1.0",
+                            @"CS1InputTextSettingsViewController"
+                        );
+                    }
                 }
             } @catch (NSException *exception) {
                 NSLog(@"注册插件失败: %@", exception);
