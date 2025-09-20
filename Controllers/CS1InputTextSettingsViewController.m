@@ -726,3 +726,29 @@ static CGFloat const kDefaultBorderWidth = 1.0f;
 }
 
 @end 
+
+// 在 setupData 方法中添加（建议放在 basicSection 中）
+CSSettingItem *fullscreenBackItem = [CSSettingItem 
+    switchItemWithTitle:@"全屏返回手势" 
+              iconName:@"arrow.left.arrow.right" 
+             iconColor:[UIColor systemPurpleColor] 
+          switchValue:[defaults boolForKey:kEnableFullscreenBackGestureKey] 
+    valueChangedBlock:^(BOOL isOn) {
+        [defaults setBool:isOn forKey:kEnableFullscreenBackGestureKey];
+        [defaults synchronize];
+        
+        // 发送全局通知
+        [[NSNotificationCenter defaultCenter] 
+            postNotificationName:kFullscreenBackGestureStateChangedNotification 
+                          object:nil];
+        
+        // 立即刷新手势状态
+        if (weakSelf.gestureStatusUpdateBlock) {
+            weakSelf.gestureStatusUpdateBlock(isOn);
+        }
+    }];
+
+// 修改 basicSection 的 items 数组
+CSSettingSection *basicSection = [CSSettingSection 
+    sectionWithHeader:@"基本设置" 
+               items:@[enableItem, fullscreenBackItem, roundedCornersItem, borderEnabledItem]];
