@@ -14,20 +14,20 @@ NewFeature_CODESIGN = ldid -S
 
 # 源文件（使用 Tab 缩进 ⇥）
 NewFeature_FILES = Tweak.xm \
-Hooks/InputTextHooks.xm \
-Hooks/WCTimeLineMessageTail.xm \
-Controllers/CS1InputTextSettingsViewController.m
+                    Hooks/InputTextHooks.xm \
+                    Hooks/WCTimeLineMessageTail.xm \
+                    Controllers/CS1InputTextSettingsViewController.m
 
 # 编译选项
 NewFeature_CFLAGS = -fobjc-arc \
--I$(THEOS_PROJECT_DIR)/Headers \
--I$(THEOS_PROJECT_DIR)/Hooks \
--Wno-error \
--Wno-nonnull \
--Wno-deprecated-declarations \
--Wno-arc-performSelector-leaks \
--Wno-incompatible-pointer-types \
--Wno-unicode-whitespace
+                    -I$(THEOS_PROJECT_DIR)/Headers \
+                    -I$(THEOS_PROJECT_DIR)/Hooks \
+                    -Wno-error \
+                    -Wno-nonnull \
+                    -Wno-deprecated-declarations \
+                    -Wno-arc-performSelector-leaks \
+                    -Wno-incompatible-pointer-types \
+                    -Wno-unicode-whitespace
 
 # 框架依赖
 NewFeature_FRAMEWORKS = UIKit Foundation LocalAuthentication UserNotifications
