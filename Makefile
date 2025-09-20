@@ -11,7 +11,7 @@ TWEAK_NAME = NewFeature
 NewFeature_CODESIGN = ldid -S
 
 # 源文件
-NewFeature_FILES = NewFeature.xm \
+NewFeature_FILES = Tweak.xm \
                    $(wildcard Hooks/*.xm) \
                    $(wildcard Controllers/*.m)
 # 编译标志
