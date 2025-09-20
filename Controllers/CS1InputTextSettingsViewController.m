@@ -1,5 +1,8 @@
 #import "CS1InputTextSettingsViewController.h"
 #import <UIKit/UIKit.h>
+#import <Preferences/PSListController.h>
+#import <Preferences/PSSpecifier.h>
+#import <Preferences/PSTableCell.h>
 
 // UserDefaults Key常量
 static NSString * const kInputTextEnabledKey = @"com.wechat.enhance.inputText.enabled";
