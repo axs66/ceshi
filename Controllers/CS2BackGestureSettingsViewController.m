@@ -5,22 +5,6 @@
 // 全屏返回手势开关键
 static NSString * const kFullScreenBackGestureEnabledKey = @"com.wechat.enhance.fullScreenBackGesture.enabled";
 
-// 添加类型定义
-@interface CSSettingSection : NSObject
-@property (nonatomic, copy) NSString *header;
-@property (nonatomic, copy) NSArray *items;
-@end
-
-@interface CSSettingItem : NSObject
-@property (nonatomic, copy) NSString *title;
-@property (nonatomic, copy) NSString *iconName;
-@property (nonatomic, strong) UIColor *iconColor;
-@property (nonatomic, copy) NSString *detail;
-@property (nonatomic, assign) NSInteger itemType;
-@property (nonatomic, assign) BOOL switchValue;
-@property (nonatomic, copy) void (^switchValueChanged)(BOOL isOn);
-@end
-
 @implementation CS2BackGestureSettingsViewController
 
 - (void)viewDidLoad {
@@ -44,30 +28,25 @@ static NSString * const kFullScreenBackGestureEnabledKey = @"com.wechat.enhance.
 - (void)setupData {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     
-    // 全屏返回手势开关
-    CSSettingItem *fullScreenBackGestureItem = [[objc_getClass("CSSettingItem") alloc] init];
-    fullScreenBackGestureItem.title = @"启用全屏返回手势";
-    fullScreenBackGestureItem.iconName = @"arrow.left.arrow.right";
-    fullScreenBackGestureItem.iconColor = [UIColor systemBlueColor];
-    fullScreenBackGestureItem.itemType = 1; // CSSettingItemTypeSwitch
-    fullScreenBackGestureItem.switchValue = [defaults boolForKey:kFullScreenBackGestureEnabledKey];
-    fullScreenBackGestureItem.switchValueChanged = ^(BOOL isOn) {
+    // 使用类方法创建设置项
+    CSSettingItem *fullScreenBackGestureItem = [CSSettingItem switchItemWithTitle:@"启用全屏返回手势" 
+                                                                        iconName:@"arrow.left.arrow.right" 
+                                                                       iconColor:[UIColor systemBlueColor] 
+                                                                     switchValue:[defaults boolForKey:kFullScreenBackGestureEnabledKey]
+                                                               valueChangedBlock:^(BOOL isOn) {
         [defaults setBool:isOn forKey:kFullScreenBackGestureEnabledKey];
         [defaults synchronize];
-    };
+    }];
     
-    // 说明项
-    CSSettingItem *descriptionItem = [[objc_getClass("CSSettingItem") alloc] init];
-    descriptionItem.title = @"功能说明";
-    descriptionItem.iconName = @"info.circle";
-    descriptionItem.iconColor = [UIColor systemGrayColor];
-    descriptionItem.detail = @"屏幕中间右滑返回";
-    descriptionItem.itemType = 0; // CSSettingItemTypeNormal
+    // 创建说明项
+    CSSettingItem *descriptionItem = [CSSettingItem itemWithTitle:@"功能说明" 
+                                                         iconName:@"info.circle" 
+                                                        iconColor:[UIColor systemGrayColor] 
+                                                          detail:@"屏幕中间右滑返回"];
     
-    // 设置组
-    CSSettingSection *mainSection = [[objc_getClass("CSSettingSection") alloc] init];
-    mainSection.header = @"手势设置";
-    mainSection.items = @[fullScreenBackGestureItem, descriptionItem];
+    // 创建设置组
+    CSSettingSection *mainSection = [CSSettingSection sectionWithHeader:@"手势设置" 
+                                                                 items:@[fullScreenBackGestureItem, descriptionItem]];
     
     self.sections = @[mainSection];
 }
