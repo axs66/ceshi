@@ -31,7 +31,7 @@ static CGFloat const kDefaultBorderWidth = 1.0f;
     [super viewDidLoad];
     
     // 设置导航标题
-    self.title = @"NewFeature";
+    self.title = @"输入框自定义";
     
     // 设置UI样式
     self.tableView.backgroundColor = [UIColor systemGroupedBackgroundColor];
@@ -82,6 +82,11 @@ static CGFloat const kDefaultBorderWidth = 1.0f;
     }
 }
 
+- (void)setupData {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    
+    // 基本设置组
+    __weak typeof(self) weakSelf = self; // 使用弱引用避免循环引用
     
     // 显示占位文本开关
     CSSettingItem *enableItem = [CSSettingItem switchItemWithTitle:@"显示占位文本" 
@@ -340,10 +345,9 @@ static CGFloat const kDefaultBorderWidth = 1.0f;
     return self.sections[section].header;
 }
 
-
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
     if (section == 0) {
-        return @"开启全屏返回手势可在微信任意页面通过右滑返回，开启显示占位文本可在聊天输入框中显示自定义文本，开启输入框圆角可使输入框两侧呈现圆润效果，开启边框可为输入框添加自定义边框";
+        return @"开启显示占位文本可在聊天输入框中显示自定义文本，开启输入框圆角可使输入框两侧呈现圆润效果，开启边框可为输入框添加自定义边框";
     }
     
     // 获取当前部分的头部标题
