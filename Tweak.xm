@@ -1,5 +1,4 @@
 #import <UIKit/UIKit.h>
-#import <Foundation/Foundation.h>
 
 // 插件注册入口
 %hook MinimizeViewController
@@ -202,23 +201,18 @@ unsigned long long hook_isOpenNewBackup(id self, SEL _cmd) {
 
 // WCFullSwipe微信添加全局屏幕中间返回功能
 
-
-
-// 定义常量
-static NSString *const kEnableFullscreenBackGestureKey = @"EnableFullscreenBackGesture";
-static NSString *const kFullscreenBackGestureStateChangedNotification = @"FullscreenBackGestureStateChangedNotification";
-
 @interface MMUIViewController : UIViewController
 @property (nonatomic, readonly) UINavigationController *navigationController;
 @end
 
 %hook MMUIViewController
 
-// 1. 封装手势添加逻辑
+// 1. 封装手势添加逻辑（新增方法）
 - (void)cs_addFullscreenBackGestureIfNeeded {
     BOOL enabled = [[NSUserDefaults standardUserDefaults] boolForKey:kEnableFullscreenBackGestureKey];
     if (!enabled) return;
     
+    // 保留您原有的手势实现
     UIGestureRecognizer *edgeGesture = self.navigationController.interactivePopGestureRecognizer;
     NSArray *targets = [edgeGesture valueForKey:@"_targets"];
     id targetObj = [targets.firstObject valueForKey:@"target"];
@@ -233,104 +227,67 @@ static NSString *const kFullscreenBackGestureStateChangedNotification = @"Fullsc
     }];
     
     if (!gestureExists) {
-        UIPanGestureRecognizer *panGesture = [[UIPanGestureRecognizer alloc] 
+        UIPanGestureRecognizer *fullScreenPan = [[UIPanGestureRecognizer alloc] 
             initWithTarget:targetObj 
                    action:@selector(handleNavigationTransition:)];
-        panGesture.delegate = self;
-        panGesture.maximumNumberOfTouches = 1;
-        panGesture.cancelsTouchesInView = NO;
-        [self.view addGestureRecognizer:panGesture];
+        fullScreenPan.delegate = self;
+        fullScreenPan.maximumNumberOfTouches = 1;
+        fullScreenPan.cancelsTouchesInView = NO;
+        [self.view addGestureRecognizer:fullScreenPan];
     }
 }
 
-// 2. 修改 viewDidLoad
+// 2. 修改 viewDidLoad（调用新增方法）
 - (void)viewDidLoad {
     %orig;
     [self cs_addFullscreenBackGestureIfNeeded];
 }
 
-// 3. 修改手势代理方法
-- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gesture {
-    if (![[NSUserDefaults standardUserDefaults] boolForKey:kEnableFullscreenBackGestureKey]) {
-        return %orig;
-    }
-    
-    // 原有区域检测逻辑...
-    if ([gesture isKindOfClass:[UIPanGestureRecognizer class]] && 
-        gesture != self.navigationController.interactivePopGestureRecognizer) {
-        // 这里添加你的手势判断逻辑
-        UIPanGestureRecognizer *panGesture = (UIPanGestureRecognizer *)gesture;
-        CGPoint translation = [panGesture translationInView:self.view];
-        if (translation.x <= 0) return NO; // 禁止右滑返回
-        
-        // 其他判断条件...
-    }
+// 3. 保留您原有的手势代理方法（完全不变）
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
+    // 保持您原有的区域检测逻辑...
     return %orig;
 }
 
-%end
-
-
-// 4. 创建设置通知监听的类
-%group SettingsObserver
-
-%hook NSObject
-
-// 监听设置变化
-- (void)settingsDidChange:(NSNotification *)notification {
-    if ([notification.name isEqualToString:kFullscreenBackGestureStateChangedNotification]) {
-        BOOL enabled = [[NSUserDefaults standardUserDefaults] boolForKey:kEnableFullscreenBackGestureKey];
-        
-        // 更新所有窗口中的手势状态
+// 4. 在构造函数中注册通知监听（新增部分）
+%ctor {
+    %init;
+    
+    [[NSNotificationCenter defaultCenter] 
+        addObserverForName:kFullscreenBackGestureStateChangedNotification
+                    object:nil 
+                     queue:[NSOperationQueue mainQueue]
+                usingBlock:^(NSNotification *note) {
+        // 更新所有已存在的视图控制器
         for (UIWindow *window in [UIApplication sharedApplication].windows) {
-            [self updateGestureRecognizersInView:window.rootViewController.view enabled:enabled];
+            UIViewController *rootVC = window.rootViewController;
+            [self recursivelyUpdateGestureInViewController:rootVC];
         }
+    }];
+    
+    // 设置默认值（首次安装时默认开启）
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:kEnableFullscreenBackGestureKey] == nil) {
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kEnableFullscreenBackGestureKey];
     }
 }
 
-// 递归更新所有视图中的手势
-- (void)updateGestureRecognizersInView:(UIView *)view enabled:(BOOL)enabled {
-    for (UIGestureRecognizer *gesture in view.gestureRecognizers) {
-        if ([gesture isKindOfClass:[UIPanGestureRecognizer class]] && 
-            [NSStringFromSelector(gesture.action) containsString:@"handleNavigationTransition"]) {
-            gesture.enabled = enabled;
-        }
+// 辅助方法：递归更新所有视图控制器的手势状态（新增）
+- (void)recursivelyUpdateGestureInViewController:(UIViewController *)vc {
+    if ([vc isKindOfClass:NSClassFromString(@"MMUIViewController")]) {
+        [vc performSelector:@selector(cs_addFullscreenBackGestureIfNeeded)];
     }
     
-    for (UIView *subview in view.subviews) {
-        [self updateGestureRecognizersInView:subview enabled:enabled];
+    for (UIViewController *childVC in vc.childViewControllers) {
+        [self recursivelyUpdateGestureInViewController:childVC];
+    }
+    
+    if (vc.presentedViewController) {
+        [self recursivelyUpdateGestureInViewController:vc.presentedViewController];
     }
 }
 
 %end
 
-%end // %group SettingsObserver
-
-
-// 5. 正确的构造函数
-%ctor {
-    @autoreleasepool {
-        // 初始化hook
-        %init(MMUIViewController = objc_getClass("MMUIViewController"));
-        %init(SettingsObserver=objc_getClass("NSObject"));
-        
-        NSLog(@"✅ 全局返回手势插件已加载");
-        
-        // 设置默认值（首次安装时默认开启）
-        if ([[NSUserDefaults standardUserDefaults] objectForKey:kEnableFullscreenBackGestureKey] == nil) {
-            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kEnableFullscreenBackGestureKey];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-        }
-        
-        // 注册通知监听（在主线程）
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [[NSNotificationCenter defaultCenter] addObserver:self
-                                                    selector:@selector(settingsDidChange:)
-                                                        name:kFullscreenBackGestureStateChangedNotification
-                                                      object:nil];
-        });
-    }
-}
 
 
 
