@@ -13,7 +13,7 @@ TWEAK_NAME = NewFeature
 # NewFeature_CODESIGN = ldid -S
 
 # 源文件（使用 Tab 缩进 ⇥）
-NewFeature_FILES = Tweak.xm Hooks/InputTextHooks.xm Hooks/WCTimeLineMessageTail.xm Controllers/CS1InputTextSettingsViewController.m  Controllers/CSSettingTableViewCell.m
+NewFeature_FILES = Tweak.xm Hooks/InputTextHooks.xm Hooks/WCTimeLineMessageTail.xm Controllers/CS1InputTextSettingsViewController.m Controllers/CS2BackGestureSettingsViewController.m Controllers/CSSettingTableViewCell.m
 
 # 编译选项
 NewFeature_CFLAGS = -fobjc-arc -Wno-error -Wno-nonnull -Wno-deprecated-declarations -Wno-incompatible-pointer-types -Wno-unicode-whitespace  \
