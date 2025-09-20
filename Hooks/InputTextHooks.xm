@@ -4,7 +4,7 @@
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 #import <Foundation/Foundation.h>
-#import "../Headers/WCPluginsHeader.h" 
+#import "WCPluginsHeader.h" 
 
 static NSString *wbzybt = @"NewFeature";
 static NSString *wbzybb = @"5.2.0";
