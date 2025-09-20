@@ -9,8 +9,6 @@ static NSString * const kInputTextAlphaKey = @"com.wechat.enhance.inputText.alph
 static NSString * const kInputTextFontSizeKey = @"com.wechat.enhance.inputText.fontSize";
 static NSString * const kInputTextBoldKey = @"com.wechat.enhance.inputText.bold";
 static NSString * const kInputTextRoundedCornersKey = @"com.wechat.enhance.inputText.roundedCorners";
-// 添加全屏返回手势开关键
-static NSString * const kFullScreenBackGestureEnabledKey = @"com.wechat.enhance.fullScreenBackGesture.enabled";
 // 添加圆角大小设置键
 static NSString * const kInputTextCornerRadiusKey = @"com.wechat.enhance.inputText.cornerRadius";
 // 添加边框相关设置键
@@ -83,22 +81,6 @@ static CGFloat const kDefaultBorderWidth = 1.0f;
         self.borderColor = [UIColor systemGrayColor];
     }
 }
-
-- (void)setupData {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    
-    // 基本设置组
-    __weak typeof(self) weakSelf = self;
-    
-    // 全屏返回手势开关
-    CSSettingItem *fullScreenBackGestureItem = [CSSettingItem switchItemWithTitle:@"全屏返回手势" 
-                                                                        iconName:@"arrow.left.arrow.right" 
-                                                                       iconColor:[UIColor systemBlueColor] 
-                                                                     switchValue:[defaults boolForKey:@"com.wechat.enhance.fullScreenBackGesture.enabled"]
-                                                               valueChangedBlock:^(BOOL isOn) {
-        [defaults setBool:isOn forKey:@"com.wechat.enhance.fullScreenBackGesture.enabled"];
-        [defaults synchronize];
-    }];
 
     
     // 显示占位文本开关
