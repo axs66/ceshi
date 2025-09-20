@@ -33,7 +33,7 @@ static CGFloat const kDefaultBorderWidth = 1.0f;
     [super viewDidLoad];
     
     // 设置导航标题
-    self.title = @"输入框自定义";
+    self.title = @"NewFeature";
     
     // 设置UI样式
     self.tableView.backgroundColor = [UIColor systemGroupedBackgroundColor];
@@ -88,23 +88,15 @@ static CGFloat const kDefaultBorderWidth = 1.0f;
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     
     // 基本设置组
-    __weak typeof(self) weakSelf = self; // 使用弱引用避免循环引用
-
-    
-    // 全屏返回手势
-- (void)setupData {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    
-    // 基本设置组
     __weak typeof(self) weakSelf = self;
     
     // 全屏返回手势开关
     CSSettingItem *fullScreenBackGestureItem = [CSSettingItem switchItemWithTitle:@"全屏返回手势" 
                                                                         iconName:@"arrow.left.arrow.right" 
                                                                        iconColor:[UIColor systemBlueColor] 
-                                                                     switchValue:[defaults boolForKey:kFullScreenBackGestureEnabledKey]
+                                                                     switchValue:[defaults boolForKey:@"com.wechat.enhance.fullScreenBackGesture.enabled"]
                                                                valueChangedBlock:^(BOOL isOn) {
-        [defaults setBool:isOn forKey:kFullScreenBackGestureEnabledKey];
+        [defaults setBool:isOn forKey:@"com.wechat.enhance.fullScreenBackGesture.enabled"];
         [defaults synchronize];
     }];
 
