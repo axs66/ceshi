@@ -8,7 +8,7 @@ include $(THEOS)/makefiles/common.mk
 TWEAK_NAME = NewFeature
 #NewFeature_CODESIGN = ldid -S
 
-NewFeature_FILES = tweak.xm
+NewFeature_FILES = Tweak.xm
 NewFeature_CFLAGS = -fobjc-arc -Wno-error -Wno-nonnull -Wno-deprecated-declarations -Wno-incompatible-pointer-types -Wno-unicode-whitespace
 NewFeature_FRAMEWORKS = UIKit Foundation LocalAuthentication UserNotifications
 
