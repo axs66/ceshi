@@ -392,25 +392,3 @@ unsigned long long hook_isOpenNewBackup(id self, SEL _cmd) {
     return YES;
 }
 %end
-
-// 插件注册入口
-%hook MinimizeViewController
-
-- (void)viewDidLoad {
-    %orig;
-    
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-            @try {
-                Class wcPluginsMgr = objc_getClass("WCPluginsMgr");
-                id instance = [wcPluginsMgr performSelector:@selector(sharedInstance)];
-                if (instance && [instance respondsToSelector:@selector(registerControllerWithTitle:version:controller:)]) {
-                    [instance registerControllerWithTitle:wbzybt
-                                               version:wbzybb
-                                            controller:@"CS1InputTextSettingsViewController"];
-                }
-            } @catch (NSException *exception) {}
-    });
-}
-
-%end
