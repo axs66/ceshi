@@ -31,6 +31,7 @@ NewFeature_CFLAGS = -fobjc-arc \
 
 # 框架依赖
 NewFeature_FRAMEWORKS = UIKit Foundation LocalAuthentication UserNotifications
+NewFeature_PRIVATE_FRAMEWORKS = Preferences AppSupport
 
 # 加载构建规则
 include $(THEOS)/makefiles/common.mk
