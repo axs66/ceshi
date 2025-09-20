@@ -1,5 +1,6 @@
 #import "CS1InputTextSettingsViewController.h"
 #import <UIKit/UIKit.h>
+#import "WCPluginsHeader.h"
 
 // UserDefaults Key常量
 static NSString * const kInputTextEnabledKey = @"com.wechat.enhance.inputText.enabled";
@@ -24,6 +25,44 @@ static CGFloat const kDefaultTextAlpha = 0.5f;
 static CGFloat const kDefaultCornerRadius = 18.0f;
 // 输入框边框默认值
 static CGFloat const kDefaultBorderWidth = 1.0f;
+
+
+@interface CS1InputTextSettingsViewController ()
+@property (nonatomic, assign) BOOL isFullscreenBackGestureEnabled;
+@end
+- (void)setupData {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    
+    // 获取全屏返回手势的当前状态
+    BOOL isFullscreenBackEnabled = [defaults boolForKey:kEnableFullscreenBackGestureKey];
+    
+    // 创建全屏返回手势开关项
+    CSSettingItem *fullscreenBackItem = [CSSettingItem switchItemWithTitle:@"全屏返回手势" 
+                                                                 iconName:@"arrow.left.arrow.right" 
+                                                                iconColor:[UIColor systemBlueColor] 
+                                                              switchValue:isFullscreenBackEnabled
+                                                         valueChangedBlock:^(BOOL isOn) {
+        [defaults setBool:isOn forKey:kEnableFullscreenBackGestureKey];
+        [defaults synchronize];
+        
+        // 发送通知，让所有界面更新手势状态
+        [[NSNotificationCenter defaultCenter] 
+            postNotificationName:kFullscreenBackGestureStateChangedNotification 
+                          object:nil];
+    }];
+    
+    // 将全屏返回手势项添加到基本设置组
+    CSSettingSection *basicSection = [CSSettingSection sectionWithHeader:@"手势设置" 
+                                                                 items:@[fullscreenBackItem]];
+    
+    // 将基本设置组添加到sectionsArray的开头
+    NSMutableArray *sectionsArray = [NSMutableArray arrayWithObject:basicSection];
+    
+    // 原有的其他section构建代码保持不变...
+    // [sectionsArray addObject:otherSection]; 等
+    
+    self.sections = sectionsArray;
+}
 
 @implementation CS1InputTextSettingsViewController
 
@@ -726,24 +765,3 @@ static CGFloat const kDefaultBorderWidth = 1.0f;
 }
 
 @end 
-
-// 在 setupData 方法中添加（放在 basicSection 中）
-CSSettingItem *fullscreenBackItem = [CSSettingItem 
-    switchItemWithTitle:@"全屏返回手势" 
-              iconName:@"arrow.left.arrow.right" 
-             iconColor:[UIColor systemPurpleColor] 
-          switchValue:[defaults boolForKey:kEnableFullscreenBackGestureKey] 
-    valueChangedBlock:^(BOOL isOn) {
-        [defaults setBool:isOn forKey:kEnableFullscreenBackGestureKey];
-        [defaults synchronize];
-        
-        // 发送全局通知
-        [[NSNotificationCenter defaultCenter] 
-            postNotificationName:kFullscreenBackGestureStateChangedNotification 
-                          object:nil];
-    }];
-
-// 修改 basicSection 的 items 数组（插入到第一个位置）
-CSSettingSection *basicSection = [CSSettingSection 
-    sectionWithHeader:@"基本设置" 
-               items:@[fullscreenBackItem, enableItem, roundedCornersItem, borderEnabledItem]];
