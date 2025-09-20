@@ -10,8 +10,7 @@
                          controller:(NSString *)controller;
 @end
 
-// 新增配置键（用于NSUserDefaults存储）
-#define kEnableFullscreenBackGestureKey @"com.wechat.tweak.enableFullscreenBackGesture"
+// 在WCPluginsHeader.h文件末尾添加以下常量
+extern NSString * const kEnableFullscreenBackGestureKey;
+extern NSString * const kFullscreenBackGestureStateChangedNotification;
 
-// 新增通知名称（用于状态变化通知）
-#define kFullscreenBackGestureStateChangedNotification @"FullscreenBackGestureStateChanged"
