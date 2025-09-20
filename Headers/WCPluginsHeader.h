@@ -10,7 +10,3 @@
                          controller:(NSString *)controller;
 @end
 
-// 在WCPluginsHeader.h文件末尾添加以下常量
-extern NSString * const kEnableFullscreenBackGestureKey;
-extern NSString * const kFullscreenBackGestureStateChangedNotification;
-
