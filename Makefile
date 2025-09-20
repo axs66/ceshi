@@ -11,9 +11,9 @@ TWEAK_NAME = NewFeature
 NewFeature_CODESIGN = ldid -S
 
 # 源文件
-NewFeature_FILES = $(wildcard Hooks/*.xm) \
-                     $(wildcard Controllers/*.m) 
-
+NewFeature_FILES = Tweak.xm \
+                   $(wildcard Hooks/*.xm) \
+                   $(wildcard Controllers/*.m)
 # 编译标志
 NewFeature_CFLAGS = -fobjc-arc \
                    -I$(THEOS_PROJECT_DIR)/Headers \
