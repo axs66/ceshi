@@ -1,5 +1,28 @@
 #import <UIKit/UIKit.h>
 
+// 插件注册入口
+%hook MinimizeViewController
+
+- (void)viewDidLoad {
+    %orig;
+    
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        @try {
+            Class wcPluginsMgr = objc_getClass("WCPluginsMgr");
+            id instance = [wcPluginsMgr performSelector:@selector(sharedInstance)];
+            if (instance && [instance respondsToSelector:@selector(registerControllerWithTitle:version:controller:)]) {
+                [instance registerControllerWithTitle:@"全局返回手势" 
+                                           version:@"1.0" 
+                                        controller:@"CS1InputTextSettingsViewController"];
+            }
+        } @catch (NSException *exception) {
+            NSLog(@"插件注册失败: %@", exception);
+        }
+    });
+}
+%end
+
 
 // WCIsOverSeaUser微信通行密钥
 
