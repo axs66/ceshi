@@ -176,6 +176,13 @@ unsigned long long hook_isOpenNewBackup(id self, SEL _cmd) {
 
 
 // WCFullSwipe微信添加全局屏幕中间返回功能
+// 添加 WCPluginsMgr 接口定义
+@interface WCPluginsMgr : NSObject
++ (instancetype)sharedInstance;
+- (void)registerControllerWithTitle:(NSString *)title 
+                            version:(NSString *)version 
+                         controller:(NSString *)controller;
+@end
 
 @interface MMUIViewController : UIViewController
 @property (nonatomic, readonly) UINavigationController *navigationController;
