@@ -1,5 +1,5 @@
 #import <substrate.h>
-#import "../Headers/WCHeaders.h"
+#import "WeChatHeaders.h" 
 
 //让我们修改微信上传时候所用的appInfo
 %hook WCUploadTask
