@@ -12,13 +12,15 @@ export DEBUG = 1
 TWEAK_NAME = NewFeature
 NewFeature_CODESIGN = ldid -S
 
-# 源文件与头文件路径
+# 源文件
 NewFeature_FILES = Tweak.xm \
                    $(wildcard Hooks/*.xm) \
                    $(wildcard Controllers/*.m)
+
+# 关键修改：统一使用 -I 绝对路径
 NewFeature_CFLAGS = -fobjc-arc \
-                   -I$(THEOS_PROJECT_DIR)/Headers \
-                   -I$(THEOS_PROJECT_DIR)/Hooks \
+                   -I$(THEOS_PROJECT_DIR)/Headers \  # Headers/ 目录
+                   -I$(THEOS_PROJECT_DIR)/Hooks \    # Hooks/ 目录（可选，如果Hooks/下有头文件）
                    -Wno-error \
                    -Wno-nonnull \
                    -Wno-deprecated-declarations \
@@ -28,8 +30,8 @@ NewFeature_CFLAGS = -fobjc-arc \
 
 # 框架依赖
 NewFeature_FRAMEWORKS = UIKit Foundation LocalAuthentication UserNotifications
-NewFeature_PRIVATE_FRAMEWORKS = AppSupport  # 按需添加
-NewFeature_LDFLAGS += -weak_framework AppSupport  # 弱链接私有框架
+NewFeature_PRIVATE_FRAMEWORKS = AppSupport
+NewFeature_LDFLAGS += -weak_framework AppSupport
 
 # 加载构建规则
 include $(THEOS)/makefiles/common.mk
