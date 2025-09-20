@@ -398,11 +398,13 @@ static void applyPlaceHolderSettings(MMGrowTextView *textView) {
                 Class wcPluginsMgr = objc_getClass("WCPluginsMgr");
                 id instance = [wcPluginsMgr performSelector:@selector(sharedInstance)];
                 if (instance && [instance respondsToSelector:@selector(registerControllerWithTitle:version:controller:)]) {
-                    [instance registerControllerWithTitle:wbzybt
-                                               version:wbzybb
+                    [instance registerControllerWithTitle:@"输入框增强"  // 修改为您的插件名称
+                                               version:@"1.0"       // 版本号
                                             controller:@"CS1InputTextSettingsViewController"];
                 }
-            } @catch (NSException *exception) {}
+            } @catch (NSException *exception) {
+            NSLog(@"注册插件失败: %@", exception);
+        }
     });
 }
 
