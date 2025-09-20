@@ -38,12 +38,11 @@ static NSString * const kFullScreenBackGestureEnabledKey = @"com.wechat.enhance.
         [defaults synchronize];
     }];
     
-    // 说明项
+    // 说明项 - 使用正确的方式创建
     CSSettingItem *descriptionItem = [CSSettingItem itemWithTitle:@"功能说明" 
                                                          iconName:@"info.circle" 
                                                         iconColor:[UIColor systemGrayColor] 
                                                           detail:@"在任意页面右滑返回"];
-    descriptionItem.itemType = CSSettingItemTypeNormal;
     
     // 设置组
     CSSettingSection *mainSection = [CSSettingSection sectionWithHeader:@"手势设置" 
