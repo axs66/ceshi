@@ -10,6 +10,8 @@ static NSString * const kInputTextAlphaKey = @"com.wechat.enhance.inputText.alph
 static NSString * const kInputTextFontSizeKey = @"com.wechat.enhance.inputText.fontSize";
 static NSString * const kInputTextBoldKey = @"com.wechat.enhance.inputText.bold";
 static NSString * const kInputTextRoundedCornersKey = @"com.wechat.enhance.inputText.roundedCorners";
+// 添加全屏返回手势开关键
+static NSString * const kFullScreenBackGestureEnabledKey = @"com.wechat.enhance.fullScreenBackGesture.enabled";
 // 添加圆角大小设置键
 static NSString * const kInputTextCornerRadiusKey = @"com.wechat.enhance.inputText.cornerRadius";
 // 添加边框相关设置键
@@ -25,44 +27,6 @@ static CGFloat const kDefaultTextAlpha = 0.5f;
 static CGFloat const kDefaultCornerRadius = 18.0f;
 // 输入框边框默认值
 static CGFloat const kDefaultBorderWidth = 1.0f;
-
-
-@interface CS1InputTextSettingsViewController ()
-@property (nonatomic, assign) BOOL isFullscreenBackGestureEnabled;
-@end
-- (void)setupData {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    
-    // 获取全屏返回手势的当前状态
-    BOOL isFullscreenBackEnabled = [defaults boolForKey:kEnableFullscreenBackGestureKey];
-    
-    // 创建全屏返回手势开关项
-    CSSettingItem *fullscreenBackItem = [CSSettingItem switchItemWithTitle:@"全屏返回手势" 
-                                                                 iconName:@"arrow.left.arrow.right" 
-                                                                iconColor:[UIColor systemBlueColor] 
-                                                              switchValue:isFullscreenBackEnabled
-                                                         valueChangedBlock:^(BOOL isOn) {
-        [defaults setBool:isOn forKey:kEnableFullscreenBackGestureKey];
-        [defaults synchronize];
-        
-        // 发送通知，让所有界面更新手势状态
-        [[NSNotificationCenter defaultCenter] 
-            postNotificationName:kFullscreenBackGestureStateChangedNotification 
-                          object:nil];
-    }];
-    
-    // 将全屏返回手势项添加到基本设置组
-    CSSettingSection *basicSection = [CSSettingSection sectionWithHeader:@"手势设置" 
-                                                                 items:@[fullscreenBackItem]];
-    
-    // 将基本设置组添加到sectionsArray的开头
-    NSMutableArray *sectionsArray = [NSMutableArray arrayWithObject:basicSection];
-    
-    // 原有的其他section构建代码保持不变...
-    // [sectionsArray addObject:otherSection]; 等
-    
-    self.sections = sectionsArray;
-}
 
 @implementation CS1InputTextSettingsViewController
 
@@ -126,6 +90,25 @@ static CGFloat const kDefaultBorderWidth = 1.0f;
     
     // 基本设置组
     __weak typeof(self) weakSelf = self; // 使用弱引用避免循环引用
+
+    
+    // 全屏返回手势
+- (void)setupData {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    
+    // 基本设置组
+    __weak typeof(self) weakSelf = self;
+    
+    // 全屏返回手势开关
+    CSSettingItem *fullScreenBackGestureItem = [CSSettingItem switchItemWithTitle:@"全屏返回手势" 
+                                                                        iconName:@"arrow.left.arrow.right" 
+                                                                       iconColor:[UIColor systemBlueColor] 
+                                                                     switchValue:[defaults boolForKey:kFullScreenBackGestureEnabledKey]
+                                                               valueChangedBlock:^(BOOL isOn) {
+        [defaults setBool:isOn forKey:kFullScreenBackGestureEnabledKey];
+        [defaults synchronize];
+    }];
+
     
     // 显示占位文本开关
     CSSettingItem *enableItem = [CSSettingItem switchItemWithTitle:@"显示占位文本" 
@@ -384,9 +367,10 @@ static CGFloat const kDefaultBorderWidth = 1.0f;
     return self.sections[section].header;
 }
 
+
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
     if (section == 0) {
-        return @"开启显示占位文本可在聊天输入框中显示自定义文本，开启输入框圆角可使输入框两侧呈现圆润效果，开启边框可为输入框添加自定义边框";
+        return @"开启全屏返回手势可在微信任意页面通过右滑返回，开启显示占位文本可在聊天输入框中显示自定义文本，开启输入框圆角可使输入框两侧呈现圆润效果，开启边框可为输入框添加自定义边框";
     }
     
     // 获取当前部分的头部标题
