@@ -177,32 +177,14 @@ unsigned long long hook_isOpenNewBackup(id self, SEL _cmd) {
 
 // WCFullSwipe微信添加全局屏幕中间返回功能
 
-// 添加完整的 MMUIViewController 接口定义
 @interface MMUIViewController : UIViewController
 @property (nonatomic, readonly) UINavigationController *navigationController;
-- (UIView *)view;
-@end
-
-// 添加 WCPluginsMgr 接口定义
-@interface WCPluginsMgr : NSObject
-+ (instancetype)sharedInstance;
-- (void)registerControllerWithTitle:(NSString *)title 
-                            version:(NSString *)version 
-                         controller:(NSString *)controller;
 @end
 
 %hook MMUIViewController
 
 - (void)viewDidLoad {
     %orig;
-
-    // 检查是否启用全屏返回手势
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    BOOL isFullScreenBackGestureEnabled = [defaults boolForKey:@"com.wechat.enhance.fullScreenBackGesture.enabled"];
-    
-    if (!isFullScreenBackGestureEnabled) {
-        return;
-    }
 
     UIGestureRecognizer *edgeGesture = self.navigationController.interactivePopGestureRecognizer;
     edgeGesture.enabled = YES;
@@ -270,7 +252,7 @@ unsigned long long hook_isOpenNewBackup(id self, SEL _cmd) {
                 Class wcPluginsMgr = objc_getClass("WCPluginsMgr");
                 id instance = [wcPluginsMgr performSelector:@selector(sharedInstance)];
                 if (instance && [instance respondsToSelector:@selector(registerControllerWithTitle:version:controller:)]) {
-                    [instance registerControllerWithTitle:@"输入框自定义"
+                    [instance registerControllerWithTitle:@"全局返回手势"
                                                version:@"1.0.0"
                                             controller:@"CS1InputTextSettingsViewController"];
                 }
