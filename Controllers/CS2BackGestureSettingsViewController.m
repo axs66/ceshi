@@ -5,6 +5,22 @@
 // 全屏返回手势开关键
 static NSString * const kFullScreenBackGestureEnabledKey = @"com.wechat.enhance.fullScreenBackGesture.enabled";
 
+// 添加类型定义
+@interface CSSettingSection : NSObject
+@property (nonatomic, copy) NSString *header;
+@property (nonatomic, copy) NSArray *items;
+@end
+
+@interface CSSettingItem : NSObject
+@property (nonatomic, copy) NSString *title;
+@property (nonatomic, copy) NSString *iconName;
+@property (nonatomic, strong) UIColor *iconColor;
+@property (nonatomic, copy) NSString *detail;
+@property (nonatomic, assign) NSInteger itemType;
+@property (nonatomic, assign) BOOL switchValue;
+@property (nonatomic, copy) void (^switchValueChanged)(BOOL isOn);
+@end
+
 @implementation CS2BackGestureSettingsViewController
 
 - (void)viewDidLoad {
@@ -29,24 +45,29 @@ static NSString * const kFullScreenBackGestureEnabledKey = @"com.wechat.enhance.
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     
     // 全屏返回手势开关
-    CSSettingItem *fullScreenBackGestureItem = [CSSettingItem switchItemWithTitle:@"全屏返回手势" 
-                                                                        iconName:@"arrow.left.arrow.right" 
-                                                                       iconColor:[UIColor systemBlueColor] 
-                                                                     switchValue:[defaults boolForKey:kFullScreenBackGestureEnabledKey]
-                                                               valueChangedBlock:^(BOOL isOn) {
+    CSSettingItem *fullScreenBackGestureItem = [[objc_getClass("CSSettingItem") alloc] init];
+    fullScreenBackGestureItem.title = @"启用全屏返回手势";
+    fullScreenBackGestureItem.iconName = @"arrow.left.arrow.right";
+    fullScreenBackGestureItem.iconColor = [UIColor systemBlueColor];
+    fullScreenBackGestureItem.itemType = 1; // CSSettingItemTypeSwitch
+    fullScreenBackGestureItem.switchValue = [defaults boolForKey:kFullScreenBackGestureEnabledKey];
+    fullScreenBackGestureItem.switchValueChanged = ^(BOOL isOn) {
         [defaults setBool:isOn forKey:kFullScreenBackGestureEnabledKey];
         [defaults synchronize];
-    }];
+    };
     
-    // 说明项 - 使用正确的方式创建
-    CSSettingItem *descriptionItem = [CSSettingItem itemWithTitle:@"功能说明" 
-                                                         iconName:@"info.circle" 
-                                                        iconColor:[UIColor systemGrayColor] 
-                                                          detail:@"在任意页面右滑返回"];
+    // 说明项
+    CSSettingItem *descriptionItem = [[objc_getClass("CSSettingItem") alloc] init];
+    descriptionItem.title = @"功能说明";
+    descriptionItem.iconName = @"info.circle";
+    descriptionItem.iconColor = [UIColor systemGrayColor];
+    descriptionItem.detail = @"屏幕中间右滑返回";
+    descriptionItem.itemType = 0; // CSSettingItemTypeNormal
     
     // 设置组
-    CSSettingSection *mainSection = [CSSettingSection sectionWithHeader:@"手势设置" 
-                                                                 items:@[fullScreenBackGestureItem, descriptionItem]];
+    CSSettingSection *mainSection = [[objc_getClass("CSSettingSection") alloc] init];
+    mainSection.header = @"手势设置";
+    mainSection.items = @[fullScreenBackGestureItem, descriptionItem];
     
     self.sections = @[mainSection];
 }
@@ -58,25 +79,28 @@ static NSString * const kFullScreenBackGestureEnabledKey = @"com.wechat.enhance.
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return self.sections[section].items.count;
+    CSSettingSection *settingSection = self.sections[section];
+    return settingSection.items.count;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     CSSettingTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:[CSSettingTableViewCell reuseIdentifier]];
     
-    CSSettingItem *item = self.sections[indexPath.section].items[indexPath.row];
+    CSSettingSection *section = self.sections[indexPath.section];
+    CSSettingItem *item = section.items[indexPath.row];
     [cell configureWithItem:item];
     
     return cell;
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
-    return self.sections[section].header;
+    CSSettingSection *settingSection = self.sections[section];
+    return settingSection.header;
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
     if (section == 0) {
-        return @"开启后可在微信任意页面通过右滑手势返回上一级，提升操作便捷性";
+        return @"开启后可在微信任意页面通过屏幕中间右滑手势返回上一级，提升操作便捷性";
     }
     return nil;
 }
