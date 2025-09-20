@@ -26,5 +26,5 @@ NewFeature_CFLAGS = -fobjc-arc \
 # 框架依赖
 NewFeature_FRAMEWORKS = UIKit Foundation LocalAuthentication UserNotifications
 
-include $(THEOS_MAKE_PATH)/common.mk
+include $(THEOS)/makefiles/common.mk
 include $(THEOS_MAKE_PATH)/tweak.mk
