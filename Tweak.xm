@@ -201,10 +201,8 @@ unsigned long long hook_isOpenNewBackup(id self, SEL _cmd) {
 
 // WCFullSwipe微信添加全局屏幕中间返回功能
 
-@interface MMUIViewController : UIViewController
-@property (nonatomic, readonly) UINavigationController *navigationController;
-@end
-
+NSString * const kEnableFullscreenBackGestureKey = @"com.wechat.enhance.enableFullscreenBackGesture";
+NSString * const kFullscreenBackGestureStateChangedNotification = @"FullscreenBackGestureStateChangedNotification";
 %hook MMUIViewController
 
 // 1. 封装手势添加逻辑（新增方法）
@@ -214,8 +212,11 @@ unsigned long long hook_isOpenNewBackup(id self, SEL _cmd) {
     
     // 保留您原有的手势实现
     UIGestureRecognizer *edgeGesture = self.navigationController.interactivePopGestureRecognizer;
+    edgeGesture.enabled = YES;
+    
     NSArray *targets = [edgeGesture valueForKey:@"_targets"];
     id targetObj = [targets.firstObject valueForKey:@"target"];
+    SEL action = NSSelectorFromString(@"handleNavigationTransition:");
     
     // 避免重复添加手势
     __block BOOL gestureExists = NO;
@@ -229,15 +230,15 @@ unsigned long long hook_isOpenNewBackup(id self, SEL _cmd) {
     if (!gestureExists) {
         UIPanGestureRecognizer *fullScreenPan = [[UIPanGestureRecognizer alloc] 
             initWithTarget:targetObj 
-                   action:@selector(handleNavigationTransition:)];
-        fullScreenPan.delegate = self;
+                   action:action];
+        fullScreenPan.delegate = (id<UIGestureRecognizerDelegate>)self;
         fullScreenPan.maximumNumberOfTouches = 1;
         fullScreenPan.cancelsTouchesInView = NO;
         [self.view addGestureRecognizer:fullScreenPan];
     }
 }
 
-// 2. 修改 viewDidLoad（调用新增方法）
+// 2. 修改viewDidLoad（调用新增方法）
 - (void)viewDidLoad {
     %orig;
     [self cs_addFullscreenBackGestureIfNeeded];
@@ -245,14 +246,45 @@ unsigned long long hook_isOpenNewBackup(id self, SEL _cmd) {
 
 // 3. 保留您原有的手势代理方法（完全不变）
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
-    // 保持您原有的区域检测逻辑...
+    if ([gestureRecognizer isKindOfClass:[UIPanGestureRecognizer class]] && 
+        gestureRecognizer != self.navigationController.interactivePopGestureRecognizer) {
+        UIPanGestureRecognizer *panGesture = (UIPanGestureRecognizer *)gestureRecognizer;
+        
+        CGPoint location = [panGesture locationInView:self.view];
+        CGFloat screenWidth = self.view.bounds.size.width;
+        
+        BOOL isInMiddleArea = location.x > screenWidth/3 && location.x < screenWidth*2/3;
+        
+        CGPoint translation = [panGesture translationInView:self.view];
+        BOOL isHorizontalSwipe = fabs(translation.x) > fabs(translation.y);
+        BOOL isRightSwipe = translation.x > 0;
+        
+        return isInMiddleArea && isHorizontalSwipe && isRightSwipe;
+    }
+    
     return %orig;
 }
 
-// 4. 在构造函数中注册通知监听（新增部分）
+// 4. 添加通知监听方法
+- (void)cs_handleGestureSettingChange:(NSNotification *)notification {
+    // 移除现有的全屏返回手势
+    [self.view.gestureRecognizers enumerateObjectsUsingBlock:^(__kindof UIGestureRecognizer *obj, NSUInteger idx, BOOL *stop) {
+        if ([NSStringFromSelector(obj.action) containsString:@"handleNavigationTransition"] && 
+            obj != self.navigationController.interactivePopGestureRecognizer) {
+            [self.view removeGestureRecognizer:obj];
+            *stop = YES;
+        }
+    }];
+    
+    // 根据需要重新添加手势
+    [self cs_addFullscreenBackGestureIfNeeded];
+}
+
+%end
 %ctor {
     %init;
     
+    // 注册通知监听
     [[NSNotificationCenter defaultCenter] 
         addObserverForName:kFullscreenBackGestureStateChangedNotification
                     object:nil 
@@ -271,22 +303,21 @@ unsigned long long hook_isOpenNewBackup(id self, SEL _cmd) {
     }
 }
 
-// 辅助方法：递归更新所有视图控制器的手势状态（新增）
-- (void)recursivelyUpdateGestureInViewController:(UIViewController *)vc {
+// 辅助方法：递归更新所有视图控制器的手势状态
+static void recursivelyUpdateGestureInViewController(UIViewController *vc) {
     if ([vc isKindOfClass:NSClassFromString(@"MMUIViewController")]) {
-        [vc performSelector:@selector(cs_addFullscreenBackGestureIfNeeded)];
+        [vc performSelector:@selector(cs_handleGestureSettingChange:) withObject:nil];
     }
     
     for (UIViewController *childVC in vc.childViewControllers) {
-        [self recursivelyUpdateGestureInViewController:childVC];
+        recursivelyUpdateGestureInViewController(childVC);
     }
     
     if (vc.presentedViewController) {
-        [self recursivelyUpdateGestureInViewController:vc.presentedViewController];
+        recursivelyUpdateGestureInViewController(vc.presentedViewController);
     }
 }
 
-%end
 
 
 
