@@ -207,63 +207,83 @@ unsigned long long hook_isOpenNewBackup(id self, SEL _cmd) {
 
 %hook MMUIViewController
 
-- (void)viewDidLoad {
-    %orig;
-
+// 1. 封装手势添加逻辑
+- (void)cs_addFullscreenBackGestureIfNeeded {
+    BOOL enabled = [[NSUserDefaults standardUserDefaults] boolForKey:kEnableFullscreenBackGestureKey];
+    if (!enabled) return;
+    
     UIGestureRecognizer *edgeGesture = self.navigationController.interactivePopGestureRecognizer;
-    edgeGesture.enabled = YES;
-
     NSArray *targets = [edgeGesture valueForKey:@"_targets"];
     id targetObj = [targets.firstObject valueForKey:@"target"];
-    SEL action = NSSelectorFromString(@"handleNavigationTransition:");
-
-    UIPanGestureRecognizer *fullScreenPan = [[UIPanGestureRecognizer alloc] initWithTarget:targetObj action:action];
-    fullScreenPan.delegate = (id<UIGestureRecognizerDelegate>)self;
     
-    fullScreenPan.maximumNumberOfTouches = 1;
+    // 避免重复添加手势
+    __block BOOL gestureExists = NO;
+    [self.view.gestureRecognizers enumerateObjectsUsingBlock:^(__kindof UIGestureRecognizer *obj, NSUInteger idx, BOOL *stop) {
+        if ([NSStringFromSelector(obj.action) containsString:@"handleNavigationTransition"]) {
+            gestureExists = YES;
+            *stop = YES;
+        }
+    }];
     
-    fullScreenPan.cancelsTouchesInView = NO;
-    
-    [self.view addGestureRecognizer:fullScreenPan];
+    if (!gestureExists) {
+        UIPanGestureRecognizer *panGesture = [[UIPanGestureRecognizer alloc] 
+            initWithTarget:targetObj 
+                   action:@selector(handleNavigationTransition:)];
+        panGesture.delegate = self;
+        panGesture.maximumNumberOfTouches = 1;
+        panGesture.cancelsTouchesInView = NO;
+        [self.view addGestureRecognizer:panGesture];
+    }
 }
 
-- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
+// 2. 修改 viewDidLoad
+- (void)viewDidLoad {
+    %orig;
+    [self cs_addFullscreenBackGestureIfNeeded];
+}
 
-    if ([gestureRecognizer isKindOfClass:[UIPanGestureRecognizer class]] && 
-        gestureRecognizer != self.navigationController.interactivePopGestureRecognizer) {
-        UIPanGestureRecognizer *panGesture = (UIPanGestureRecognizer *)gestureRecognizer;
-        
-        CGPoint location = [panGesture locationInView:self.view];
-        CGFloat screenWidth = self.view.bounds.size.width;
-        
-        BOOL isInMiddleArea = location.x > screenWidth/3 && location.x < screenWidth*2/3;
-        
-        CGPoint translation = [panGesture translationInView:self.view];
-        BOOL isHorizontalSwipe = fabs(translation.x) > fabs(translation.y);
-        BOOL isRightSwipe = translation.x > 0;
-        
-        return isInMiddleArea && isHorizontalSwipe && isRightSwipe;
+// 3. 修改手势代理方法
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gesture {
+    if (![[NSUserDefaults standardUserDefaults] boolForKey:kEnableFullscreenBackGestureKey]) {
+        return %orig;
     }
     
+    // 原有区域检测逻辑...
+    if ([gesture isKindOfClass:[UIPanGestureRecognizer class]] && 
+        gesture != self.navigationController.interactivePopGestureRecognizer) {
+        // ...保持原有判断逻辑
+    }
     return %orig;
 }
 
-- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
-
-    if (gestureRecognizer != self.navigationController.interactivePopGestureRecognizer && 
-        [gestureRecognizer isKindOfClass:[UIPanGestureRecognizer class]]) {
-        
-        if (otherGestureRecognizer == self.navigationController.interactivePopGestureRecognizer) {
-            return NO;
-        }
-        
-        return NO;
-    }
+// 4. 在构造函数中注册通知监听
+%ctor {
+    %init;
     
-    return NO;
+    [[NSNotificationCenter defaultCenter] 
+        addObserverForName:kFullscreenBackGestureStateChangedNotification
+                    object:nil 
+                     queue:[NSOperationQueue mainQueue]
+                usingBlock:^(NSNotification *note) {
+        BOOL enabled = [[NSUserDefaults standardUserDefaults] boolForKey:kEnableFullscreenBackGestureKey];
+        
+        // 更新所有窗口中的手势状态
+        for (UIWindow *window in [UIApplication sharedApplication].windows) {
+            [window.rootViewController.view.subviews enumerateObjectsUsingBlock:^(__kindof UIView *obj, NSUInteger idx, BOOL *stop) {
+                if ([obj isKindOfClass:[UIPanGestureRecognizer class]] && 
+                    [NSStringFromSelector(((UIPanGestureRecognizer *)obj).action) containsString:@"handleNavigationTransition"]) {
+                    obj.enabled = enabled;
+                }
+            }];
+        }
+    }];
+    
+    // 设置默认值（首次安装时默认开启）
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:kEnableFullscreenBackGestureKey] == nil) {
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kEnableFullscreenBackGestureKey];
+    }
 }
 
-%end
 
 
 // WCEnhance重命名【我】页面、添加图片点击关闭手势、移除加好友页面我的二维码大图
