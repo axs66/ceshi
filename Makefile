@@ -10,7 +10,7 @@ export DEBUG = 1
 
 # 项目名称
 TWEAK_NAME = NewFeature
-NewFeature_CODESIGN = ldid -S
+# NewFeature_CODESIGN = ldid -S
 
 # 源文件（使用 Tab 缩进 ⇥）
 NewFeature_FILES = Tweak.xm \
